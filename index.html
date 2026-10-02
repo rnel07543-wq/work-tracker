@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Work Day Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#060a14;--panel:rgba(255,255,255,.04);--edge:rgba(120,200,255,.16);--ink:#e8f1ff;--mute:#7d8ca8;
+    --cyan:#22d3ee;--violet:#8b5cf6;--amber:#fbbf24;--green:#34d399;
+    --display:'Orbitron',ui-monospace,Menlo,monospace;--body:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{background:var(--bg)}
+  body{margin:0;color:var(--ink);font:15px/1.45 var(--body);min-height:100vh;
+    background:
+      radial-gradient(900px 500px at 10% -10%,rgba(139,92,246,.22),transparent 60%),
+      radial-gradient(800px 500px at 100% 0%,rgba(34,211,238,.16),transparent 60%),
+      linear-gradient(rgba(120,200,255,.04) 1px,transparent 1px) 0 0/40px 40px,
+      linear-gradient(90deg,rgba(120,200,255,.04) 1px,transparent 1px) 0 0/40px 40px,
+      var(--bg);}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px 16px 40px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:6px 0 18px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);letter-spacing:.14em;font-size:.95rem;text-transform:uppercase}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan),0 0 28px var(--cyan)}
+  .brand small{display:block;color:var(--mute);font-family:var(--body);letter-spacing:.04em;text-transform:none;font-size:.75rem}
+  .nav{display:flex;align-items:center;gap:8px}
+  .nav b{font-family:var(--display);font-size:.95rem;letter-spacing:.1em;min-width:170px;text-align:center;text-transform:uppercase}
+  button{font:inherit;cursor:pointer;color:inherit}
+  .navbtn{width:40px;height:40px;border-radius:10px;border:1px solid var(--edge);background:var(--panel);font-size:1.2rem;transition:.15s}
+  .navbtn:hover{border-color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.35)}
+
+  .card{position:relative;background:var(--panel);border:1px solid var(--edge);border-radius:16px;padding:16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .card:before{content:"";position:absolute;left:14px;right:14px;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.6}
+  .card h2{margin:0 0 12px;font-family:var(--display);font-weight:500;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--mute)}
+
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
+  @media(min-width:800px){.kpis{grid-template-columns:1.5fr 1fr 1fr 1fr}}
+  .kpi small{display:block;color:var(--mute);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}
+  .kpi b{display:block;font-family:var(--display);font-size:1.35rem;margin-top:6px;font-weight:700}
+  .kpi.hero{grid-column:1/-1;background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(139,92,246,.16));border-color:rgba(34,211,238,.4);box-shadow:0 0 40px rgba(34,211,238,.1) inset}
+  @media(min-width:800px){.kpi.hero{grid-column:auto}}
+  .kpi.hero b{font-size:1.9rem;background:linear-gradient(90deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kpi .sub{display:block;color:var(--mute);font-size:.75rem;margin-top:2px}
+  .c-amber{color:var(--amber)}.c-green{color:var(--green)}.c-cyan{color:var(--cyan)}
+
+  .main{display:grid;gap:12px;grid-template-columns:1fr}
+  @media(min-width:900px){.main{grid-template-columns:1.25fr 1fr}}
+  .stack{display:grid;gap:12px;align-content:start}
+
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .dow{font-family:var(--display);font-size:.62rem;color:var(--mute);text-align:center;padding:4px 0;letter-spacing:.12em}
+  .day{position:relative;aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;transition:.15s;font-family:var(--display);font-size:.85rem}
+  .day:hover:not(.blank){border-color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.3)}
+  .day.blank{background:none;border:0;cursor:default}
+  .day.worked{background:linear-gradient(145deg,rgba(34,211,238,.35),rgba(139,92,246,.4));border-color:rgba(34,211,238,.7);box-shadow:0 0 16px rgba(34,211,238,.25)}
+  .day.today{border-color:#fff}
+  .day.sel{outline:2px solid var(--amber);outline-offset:2px}
+  .day .ot{font-family:var(--body);margin-top:2px;font-size:.58rem;font-weight:600;line-height:1.2;padding:1px 5px;border-radius:6px;background:var(--amber);color:#1a1200;box-shadow:0 0 10px rgba(251,191,36,.6)}
+  .legend{display:flex;gap:16px;font-size:.75rem;color:var(--mute);margin-top:12px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+
+  .detail{margin-top:14px;border:1px solid var(--edge);border-radius:12px;padding:12px 14px;background:rgba(0,0,0,.25)}
+  .detail h3{margin:0 0 6px;font-family:var(--display);font-size:.85rem;letter-spacing:.08em;font-weight:500}
+  .hint{color:var(--mute);font-size:.88rem}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-top:1px solid rgba(255,255,255,.07)}
+  .row:first-of-type{border-top:0}
+  .sw{position:relative;width:50px;height:28px;flex:none}
+  .sw input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer;z-index:1}
+  .sw i{position:absolute;inset:0;background:#26314a;border-radius:20px;transition:.2s;border:1px solid var(--edge)}
+  .sw i:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;background:#9fb0cc;border-radius:50%;transition:.2s}
+  .sw input:checked + i{background:rgba(34,211,238,.3);border-color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.5)}
+  .sw input:checked + i:after{left:25px;background:var(--cyan)}
+  .sw.ot input:checked + i{background:rgba(251,191,36,.25);border-color:var(--amber);box-shadow:0 0 14px rgba(251,191,36,.5)}
+  .sw.ot input:checked + i:after{background:var(--amber)}
+
+  label.l{display:block;font-size:.72rem;color:var(--mute);margin:12px 0 5px;letter-spacing:.1em;text-transform:uppercase}
+  .field{display:flex;align-items:center;border:1px solid var(--edge);border-radius:10px;background:rgba(0,0,0,.3);transition:.15s}
+  .field:focus-within{border-color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.3)}
+  .field span{padding:0 4px 0 12px;color:var(--cyan);font-family:var(--display)}
+  .field input{border:0;outline:0;font:inherit;color:var(--ink);padding:11px 12px 11px 8px;width:100%;background:transparent}
+  .field input[type=text]{padding-left:12px}
+  .note{font-size:.78rem;color:var(--mute);margin-top:8px}
+  .note b{color:var(--ink)}
+
+  .ringwrap{display:flex;align-items:center;gap:16px}
+  .ring{position:relative;width:104px;height:104px;flex:none}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:1.1rem}
+  .ringtxt b{font-family:var(--display);font-size:1.2rem}
+  .ringtxt span{display:block;color:var(--mute);font-size:.8rem}
+
+  .chart{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:8px}
+  .bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;min-width:0}
+  .bar .col{width:100%;max-width:44px;display:flex;flex-direction:column-reverse;border-radius:6px 6px 2px 2px;overflow:hidden;min-height:2px;background:rgba(255,255,255,.05)}
+  .bar .w{background:linear-gradient(180deg,var(--cyan),var(--violet))}
+  .bar .o{background:var(--amber)}
+  .bar.cur .col{box-shadow:0 0 16px rgba(34,211,238,.45)}
+  .bar em{font-style:normal;font-size:.65rem;color:var(--mute);letter-spacing:.08em;text-transform:uppercase}
+  .bar.cur em{color:var(--cyan)}
+  .bar small{font-size:.6rem;color:var(--mute)}
+
+  .btn{width:100%;margin-top:14px;padding:13px;border-radius:12px;border:1px solid var(--cyan);background:linear-gradient(90deg,rgba(34,211,238,.25),rgba(139,92,246,.3));font-family:var(--display);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;transition:.15s;box-shadow:0 0 22px rgba(34,211,238,.25)}
+  .btn:hover{box-shadow:0 0 34px rgba(34,211,238,.55);transform:translateY(-1px)}
+  .btn.ghost{background:transparent;border-color:var(--edge);box-shadow:none;margin-top:8px;font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:500;font-size:.85rem;color:var(--mute)}
+  .btn.ghost:hover{color:var(--ink);border-color:var(--mute);box-shadow:none;transform:none}
+  .auth{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(6,10,20,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .auth[hidden]{display:none}
+  .auth .card{width:100%;max-width:380px;padding:24px}
+  .auth h1{font-family:var(--display);font-size:1.15rem;letter-spacing:.1em;text-transform:uppercase;margin:0 0 4px}
+  .auth p{color:var(--mute);margin:0 0 6px;font-size:.88rem}
+  .err{color:#fb7185;font-size:.82rem;min-height:1.2em;margin-top:10px}
+  .who{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--mute)}
+  .who b{color:var(--ink);font-weight:600}
+  .who button{border:1px solid var(--edge);background:var(--panel);border-radius:8px;padding:6px 12px;font-size:.8rem;color:var(--mute)}
+  .who button:hover{color:var(--ink);border-color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="auth" id="auth" hidden>
+  <form class="card" id="authForm" autocomplete="off">
+    <h1 id="aTitle">Open your account</h1>
+    <p id="aSub"></p>
+    <div id="aNameBox"><label class="l" for="aName">Your name</label>
+      <div class="field"><input type="text" id="aName" maxlength="40"></div></div>
+    <label class="l" for="aPw" id="aPwLabel">Password</label>
+    <div class="field"><input type="password" id="aPw" autocomplete="current-password"></div>
+    <div id="aPw2Box"><label class="l" for="aPw2">Repeat password</label>
+      <div class="field"><input type="password" id="aPw2" autocomplete="new-password"></div></div>
+    <div class="err" id="aErr"></div>
+    <button class="btn" type="submit" id="aBtn">Open account</button>
+  </form>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span><div>Work Tracker<small>Days · Overtime · Earnings</small></div></div>
+    <div class="who"><span>Signed in as <b id="whoName"></b></span><button id="logout">Log out</button></div>
+    <div class="nav">
+      <button class="navbtn" id="prev" aria-label="Previous month">‹</button>
+      <b id="monthLabel"></b>
+      <button class="navbtn" id="next" aria-label="Next month">›</button>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="card kpi hero"><small id="kLabel">Earned this month</small><b id="kTotal">R 0.00</b><span class="sub" id="kAvg">–</span></div>
+    <div class="card kpi"><small>Days worked</small><b class="c-cyan" id="kDays">0</b><span class="sub" id="kDaysSub">&nbsp;</span></div>
+    <div class="card kpi"><small>Overtime earned</small><b class="c-amber" id="kOT">R 0.00</b><span class="sub" id="kOTSub">&nbsp;</span></div>
+    <div class="card kpi"><small id="kYLabel">Year to date</small><b class="c-green" id="kYTD">R 0.00</b><span class="sub" id="kYSub">&nbsp;</span></div>
+  </section>
+
+  <div class="main">
+    <section class="card">
+      <h2>Calendar</h2>
+      <div class="cal" id="cal"></div>
+      <div class="legend">
+        <span><i style="background:linear-gradient(135deg,var(--cyan),var(--violet))"></i>Worked</span>
+        <span><i style="background:var(--amber)"></i>Overtime</span>
+        <span>Tap a day to mark it worked</span>
+      </div>
+      <div class="detail" id="detail"></div>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <h2>Month progress</h2>
+        <div class="ringwrap">
+          <div class="ring">
+            <svg width="104" height="104" viewBox="0 0 104 104">
+              <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+              <circle cx="52" cy="52" r="44" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/>
+              <circle id="arc" cx="52" cy="52" r="44" fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46" style="transition:stroke-dashoffset .5s;filter:drop-shadow(0 0 6px #22d3ee)"/>
+            </svg>
+            <div class="pct" id="pct">0%</div>
+          </div>
+          <div class="ringtxt"><b id="ringMain">0 / 0</b><span>days worked vs weekdays in the month</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Last 6 months</h2>
+        <div class="chart" id="chart"></div>
+        <div class="legend"><span><i style="background:linear-gradient(180deg,var(--cyan),var(--violet))"></i>Wages</span><span><i style="background:var(--amber)"></i>Overtime</span></div>
+      </section>
+
+      <section class="card">
+        <h2>Settings</h2>
+        <label class="l" for="wage" style="margin-top:0">Daily wage</label>
+        <div class="field"><span>R</span><input type="number" id="wage" min="0" step="1" inputmode="decimal"></div>
+        <label class="l" for="name">Name (shown on PDF, optional)</label>
+        <div class="field"><input type="text" id="name"></div>
+        <div class="note">New days use the wage at the time you mark them, so old months never change by accident.</div>
+        <button class="btn ghost" id="reprice">Apply current wage to all days in this month</button>
+        <button class="btn" id="pdf">Download PDF for this month</button>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const KEY = 'workTracker.v1';
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DOW_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+const ACC_KEY = 'workTracker.account', SESSION_KEY = 'workTracker.session';
+const DATA_KEY = () => 'workTracker.data.' + (account ? account.id : 'main');
+let account = null;
+let state = { wage: 550, name: '', days: {} };
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const save = () => lsSet(DATA_KEY(), JSON.stringify(state));
+function loadState() {
+  let raw = lsGet(DATA_KEY());
+  if (!raw && lsGet(KEY)) raw = lsGet(KEY); // data saved before accounts existed
+  state = { wage: 550, name: '', days: {} };
+  try { Object.assign(state, JSON.parse(raw) || {}); } catch (e) {}
+  if (!state.name && account) state.name = account.name;
+}
+
+const now = new Date();
+let selected = null;
+let view = { y: now.getFullYear(), m: now.getMonth() };
+
+const pad = n => String(n).padStart(2, '0');
+const keyOf = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
+const dayPay = r => r.wage + (r.ot ? (r.otAmt || 0) : 0);
+const money = n => 'R ' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const $ = id => document.getElementById(id);
+
+function recordsFor(y, m) {
+  const prefix = `${y}-${pad(m + 1)}-`;
+  return Object.keys(state.days).filter(k => k.startsWith(prefix)).sort().map(k => [k, state.days[k]]);
+}
+const monthRecords = () => recordsFor(view.y, view.m);
+const sumOf = recs => recs.reduce((t, [, r]) => t + dayPay(r), 0);
+const otOf = recs => recs.reduce((t, [, r]) => t + (r.ot ? (r.otAmt || 0) : 0), 0);
+
+function weekdaysIn(y, m) {
+  let n = 0;
+  for (let d = 1, c = new Date(y, m + 1, 0).getDate(); d <= c; d++) { const w = new Date(y, m, d).getDay(); if (w && w !== 6) n++; }
+  return n;
+}
+
+function render() {
+  $('monthLabel').textContent = `${MONTHS[view.m]} ${view.y}`;
+  const cal = $('cal');
+  cal.innerHTML = DOW.map(d => `<div class="dow">${d.toUpperCase()}</div>`).join('');
+  const first = (new Date(view.y, view.m, 1).getDay() + 6) % 7;
+  const count = new Date(view.y, view.m + 1, 0).getDate();
+  for (let i = 0; i < first; i++) cal.insertAdjacentHTML('beforeend', '<div class="day blank"></div>');
+  for (let d = 1; d <= count; d++) {
+    const k = keyOf(view.y, view.m, d), rec = state.days[k];
+    const isToday = now.getFullYear() === view.y && now.getMonth() === view.m && now.getDate() === d;
+    const el = document.createElement('button');
+    el.className = 'day' + (rec ? ' worked' : '') + (isToday ? ' today' : '') + (selected === k ? ' sel' : '');
+    el.innerHTML = `<span>${d}</span>` + (rec && rec.ot ? `<span class="ot">OT${rec.otAmt ? ' +' + rec.otAmt : ''}</span>` : '');
+    el.onclick = () => {
+      if (!state.days[k]) state.days[k] = { wage: state.wage, ot: false, otAmt: 0 };
+      selected = k; save(); render();
+    };
+    cal.appendChild(el);
+  }
+  renderStats();
+  renderDetail();
+}
+
+function renderStats() {
+  const recs = monthRecords(), total = sumOf(recs), ot = otOf(recs);
+  const otDays = recs.filter(([, r]) => r.ot).length;
+  const name = MONTHS[view.m];
+  $('kLabel').textContent = `Earned in ${name}`;
+  $('kTotal').textContent = money(total);
+  $('kAvg').textContent = recs.length ? `${money(total / recs.length)} average per day` : 'No days marked yet';
+  $('kDays').textContent = recs.length;
+  $('kDaysSub').textContent = `${otDays} with overtime`;
+  $('kOT').textContent = money(ot);
+  $('kOTSub').textContent = total ? `${Math.round(ot / total * 100)}% of the month` : ' ';
+  let ytd = 0, ytdDays = 0;
+  for (let m = 0; m <= 11; m++) { const r = recordsFor(view.y, m); ytd += sumOf(r); ytdDays += r.length; }
+  $('kYLabel').textContent = `${view.y} to date`;
+  $('kYTD').textContent = money(ytd);
+  $('kYSub').textContent = `${ytdDays} days in total`;
+
+  const wd = weekdaysIn(view.y, view.m), pct = wd ? Math.min(1, recs.length / wd) : 0;
+  $('arc').style.strokeDashoffset = 276.46 * (1 - pct);
+  $('pct').textContent = Math.round(pct * 100) + '%';
+  $('ringMain').textContent = `${recs.length} / ${wd}`;
+
+  const data = [];
+  for (let i = 5; i >= 0; i--) {
+    let y = view.y, m = view.m - i; while (m < 0) { m += 12; y--; }
+    const r = recordsFor(y, m), o = otOf(r);
+    data.push({ m, w: sumOf(r) - o, o, cur: i === 0 });
+  }
+  const max = Math.max(1, ...data.map(d => d.w + d.o));
+  $('chart').innerHTML = data.map(d => {
+    const t = d.w + d.o, h = t / max * 100;
+    return `<div class="bar${d.cur ? ' cur' : ''}"><small>${t ? Math.round(t) : ''}</small>
+      <div class="col" style="height:${h}%"><div class="w" style="height:${t ? d.w / t * 100 : 0}%"></div><div class="o" style="height:${t ? d.o / t * 100 : 0}%"></div></div>
+      <em>${MONTHS[d.m].slice(0, 3)}</em></div>`;
+  }).join('');
+}
+
+function renderDetail() {
+  const box = $('detail'), rec = selected && state.days[selected];
+  if (!rec) { box.innerHTML = '<span class="hint">Tap a day to mark it as worked and add overtime.</span>'; return; }
+  const dt = new Date(selected + 'T00:00:00');
+  box.innerHTML = `<h3>${DOW_LONG[dt.getDay()]}, ${dt.getDate()} ${MONTHS[dt.getMonth()]}</h3>
+    <div class="row"><span>Worked this day (R ${rec.wage})</span><label class="sw"><input type="checkbox" id="dWorked" checked><i></i></label></div>
+    <div class="row"><span>Overtime</span><label class="sw ot"><input type="checkbox" id="dOT" ${rec.ot ? 'checked' : ''}><i></i></label></div>
+    ${rec.ot ? `<label class="l" for="dAmt">Overtime amount for this day</label>
+    <div class="field"><span>R</span><input type="number" id="dAmt" min="0" step="1" inputmode="decimal" placeholder="e.g. 200" value="${rec.otAmt || ''}"></div>` : ''}
+    <div class="note">Day total: <b id="dTotal">${money(dayPay(rec))}</b></div>`;
+  $('dWorked').onchange = () => { delete state.days[selected]; selected = null; save(); render(); };
+  $('dOT').onchange = e => { rec.ot = e.target.checked; if (!rec.ot) rec.otAmt = 0; save(); render(); if (rec.ot && $('dAmt')) $('dAmt').focus(); };
+  if ($('dAmt')) $('dAmt').oninput = e => {
+    rec.otAmt = Math.max(0, parseFloat(e.target.value) || 0); save();
+    renderStats();
+    $('dTotal').textContent = money(dayPay(rec));
+    const cell = document.querySelector('.day.sel');
+    if (cell) cell.innerHTML = `<span>${cell.firstChild.textContent}</span><span class="ot">OT${rec.otAmt ? ' +' + rec.otAmt : ''}</span>`;
+  };
+}
+
+$('prev').onclick = () => { view.m--; if (view.m < 0) { view.m = 11; view.y--; } render(); };
+$('next').onclick = () => { view.m++; if (view.m > 11) { view.m = 0; view.y++; } render(); };
+
+$('wage').oninput = e => { const v = parseFloat(e.target.value); if (v >= 0) { state.wage = v; save(); } };
+$('name').oninput = e => { state.name = e.target.value; save(); };
+
+$('reprice').onclick = () => {
+  const recs = monthRecords();
+  if (!recs.length) return;
+  if (!confirm(`Change the daily wage on all ${recs.length} worked days in ${MONTHS[view.m]} to R ${state.wage}? Overtime amounts stay as they are.`)) return;
+  recs.forEach(([, r]) => { r.wage = state.wage; });
+  save(); render();
+};
+
+$('pdf').onclick = () => {
+  const recs = monthRecords();
+  if (!recs.length) { alert('No worked days marked for this month yet.'); return; }
+  if (!window.jspdf) { alert('PDF library could not load. Check your internet connection and try again.'); return; }
+  const doc = new window.jspdf.jsPDF();
+  const title = `${MONTHS[view.m]} ${view.y}`;
+  doc.setFontSize(20); doc.text('Monthly Work Summary', 15, 20);
+  doc.setFontSize(12); doc.setTextColor(90);
+  doc.text(title + (state.name ? `  -  ${state.name}` : ''), 15, 28);
+  doc.setTextColor(0);
+
+  let y = 42;
+  const head = () => {
+    doc.setFont(undefined, 'bold'); doc.setFontSize(10);
+    doc.text('Date', 15, y); doc.text('Day', 50, y); doc.text('Type', 90, y);
+    doc.text('Wage', 125, y, { align: 'right' }); doc.text('Overtime', 160, y, { align: 'right' }); doc.text('Amount', 195, y, { align: 'right' });
+    doc.line(15, y + 2, 195, y + 2); doc.setFont(undefined, 'normal'); y += 9;
+  };
+  head();
+  let otN = 0, wageSum = 0, otSum = 0;
+  recs.forEach(([k, r]) => {
+    if (y > 270) { doc.addPage(); y = 20; head(); }
+    const dt = new Date(k + 'T00:00:00');
+    wageSum += r.wage;
+    if (r.ot) { otN++; otSum += r.otAmt || 0; }
+    doc.text(`${pad(dt.getDate())} ${MONTHS[dt.getMonth()].slice(0, 3)} ${dt.getFullYear()}`, 15, y);
+    doc.text(DOW_LONG[dt.getDay()], 50, y);
+    doc.text(r.ot ? 'Overtime' : 'Normal day', 90, y);
+    doc.text(money(r.wage), 125, y, { align: 'right' });
+    doc.text(r.ot ? money(r.otAmt || 0) : '-', 160, y, { align: 'right' });
+    doc.text(money(dayPay(r)), 195, y, { align: 'right' });
+    y += 7;
+  });
+
+  if (y > 235) { doc.addPage(); y = 20; }
+  y += 4; doc.line(15, y, 195, y); y += 9;
+  doc.setFontSize(11);
+  doc.text(`Wages (${recs.length} days worked)`, 15, y); doc.text(money(wageSum), 195, y, { align: 'right' }); y += 7;
+  doc.text(`Overtime (${otN} ${otN === 1 ? 'day' : 'days'})`, 15, y); doc.text(money(otSum), 195, y, { align: 'right' }); y += 11;
+  doc.setFont(undefined, 'bold'); doc.setFontSize(14);
+  doc.text('TOTAL FOR THE MONTH', 15, y); doc.text(money(wageSum + otSum), 195, y, { align: 'right' });
+
+  doc.save(`Work-summary-${view.y}-${pad(view.m + 1)}.pdf`);
+};
+
+async function hashPw(pw, salt) {
+  const data = new TextEncoder().encode(salt + pw);
+  if (window.crypto && crypto.subtle) {
+    const b = await crypto.subtle.digest('SHA-256', data);
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 5381; for (const c of salt + pw) h = ((h << 5) + h + c.charCodeAt(0)) | 0;
+  return 'f' + h;
+}
+
+function start() {
+  loadState();
+  $('wage').value = state.wage;
+  $('name').value = state.name;
+  $('whoName').textContent = account.name;
+  $('auth').hidden = true;
+  render();
+}
+
+function showAuth() {
+  const creating = !account;
+  $('auth').hidden = false;
+  $('aTitle').textContent = creating ? 'Open your account' : 'Welcome back';
+  $('aSub').textContent = creating ? 'Create your account to start tracking your days.' : `Log in as ${account.name}`;
+  $('aNameBox').style.display = $('aPw2Box').style.display = creating ? '' : 'none';
+  $('aBtn').textContent = creating ? 'Open account' : 'Log in';
+  $('aPw').autocomplete = creating ? 'new-password' : 'current-password';
+  $('aPw').value = $('aPw2').value = ''; $('aErr').textContent = '';
+  setTimeout(() => (creating ? $('aName') : $('aPw')).focus(), 50);
+}
+
+$('authForm').onsubmit = async e => {
+  e.preventDefault();
+  const pw = $('aPw').value, err = m => { $('aErr').textContent = m; };
+  if (!account) {
+    const name = $('aName').value.trim();
+    if (!name) return err('Please enter your name.');
+    if (pw.length < 4) return err('Password must be at least 4 characters.');
+    if (pw !== $('aPw2').value) return err('Passwords do not match.');
+    const salt = Math.random().toString(36).slice(2);
+    account = { id: 'main', name, salt, hash: await hashPw(pw, salt) };
+    lsSet(ACC_KEY, JSON.stringify(account));
+  } else if (await hashPw(pw, account.salt) !== account.hash) {
+    return err('Wrong password.');
+  }
+  lsSet(SESSION_KEY, account.id);
+  start();
+};
+
+$('logout').onclick = () => { try { localStorage.removeItem(SESSION_KEY); } catch (e) {} selected = null; showAuth(); };
+
+try { account = JSON.parse(lsGet(ACC_KEY)); } catch (e) { account = null; }
+if (account && lsGet(SESSION_KEY) === account.id) start(); else showAuth();
+</script>
+</body>
+</html>
