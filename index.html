@@ -341,49 +341,99 @@ $('reprice').onclick = () => {
   save(); render();
 };
 
+function buildPdf(recs) {
+  const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, M = 15, R = W - M;
+  const NAVY = [15, 23, 42], ACC = [14, 159, 142], AMB = [217, 119, 6], INK = [30, 41, 59],
+        MUTE = [100, 116, 139], ZEBRA = [243, 246, 249], WHITE = [255, 255, 255];
+  const fill = c => doc.setFillColor(...c), ink = c => doc.setTextColor(...c);
+  const bold = () => doc.setFont('helvetica', 'bold'), norm = () => doc.setFont('helvetica', 'normal');
+
+  let otN = 0, wageSum = 0, otSum = 0;
+  recs.forEach(([, r]) => { wageSum += r.wage; if (r.ot) { otN++; otSum += r.otAmt || 0; } });
+  const total = wageSum + otSum;
+
+  // header band
+  fill(NAVY); doc.rect(0, 0, W, 32, 'F');
+  fill(ACC); doc.rect(0, 32, W, 1.2, 'F');
+  ink(WHITE); bold(); doc.setFontSize(20); doc.text('Monthly Work Summary', M, 15);
+  norm(); doc.setFontSize(11); ink([186, 198, 214]);
+  doc.text(state.name || 'Work record', M, 24);
+  bold(); doc.setFontSize(14); ink(WHITE);
+  doc.text(`${MONTHS[view.m].toUpperCase()} ${view.y}`, R, 15, { align: 'right' });
+  norm(); doc.setFontSize(9); ink([186, 198, 214]);
+  doc.text(`${recs.length} ${recs.length === 1 ? 'day' : 'days'} worked`, R, 24, { align: 'right' });
+
+  // summary boxes
+  const bw = (W - 2 * M - 12) / 3, by = 41, bh = 22;
+  [['DAYS WORKED', String(recs.length), ZEBRA, INK],
+   ['OVERTIME EARNED', money(otSum), ZEBRA, AMB],
+   ['TOTAL FOR THE MONTH', money(total), ACC, WHITE]].forEach(([label, val, bg, fg], i) => {
+    const x = M + i * (bw + 6);
+    fill(bg); doc.roundedRect(x, by, bw, bh, 3, 3, 'F');
+    norm(); doc.setFontSize(7.5); ink(bg === ACC ? [214, 245, 240] : MUTE); doc.text(label, x + 5, by + 8);
+    bold(); doc.setFontSize(bg === ACC ? 15 : 14); ink(fg); doc.text(val, x + 5, by + 16.5);
+  });
+
+  // table
+  const col = { date: M + 4, day: M + 37, type: M + 72, wage: 138, ot: 168, amt: R - 4 };
+  let y = 71;
+  const head = () => {
+    fill(NAVY); doc.roundedRect(M, y, R - M, 9, 2, 2, 'F');
+    bold(); doc.setFontSize(8.5); ink(WHITE);
+    doc.text('DATE', col.date, y + 6); doc.text('DAY', col.day, y + 6); doc.text('TYPE', col.type, y + 6);
+    doc.text('WAGE', col.wage, y + 6, { align: 'right' });
+    doc.text('OVERTIME', col.ot, y + 6, { align: 'right' });
+    doc.text('AMOUNT', col.amt, y + 6, { align: 'right' });
+    y += 11;
+  };
+  head();
+  recs.forEach(([k, r], i) => {
+    if (y > 272) { doc.addPage(); y = 20; head(); }
+    const dt = new Date(k + 'T00:00:00');
+    if (i % 2 === 0) { fill(ZEBRA); doc.rect(M, y - 1, R - M, 7, 'F'); }
+    norm(); doc.setFontSize(9.5); ink(INK);
+    doc.text(`${pad(dt.getDate())} ${MONTHS[dt.getMonth()].slice(0, 3)} ${dt.getFullYear()}`, col.date, y + 3.8);
+    doc.text(DOW_LONG[dt.getDay()], col.day, y + 3.8);
+    if (r.ot) { bold(); ink(AMB); doc.text('Overtime', col.type, y + 3.8); norm(); ink(INK); }
+    else doc.text('Normal day', col.type, y + 3.8);
+    doc.text(money(r.wage), col.wage, y + 3.8, { align: 'right' });
+    if (r.ot) doc.text(money(r.otAmt || 0), col.ot, y + 3.8, { align: 'right' });
+    else { ink(MUTE); doc.text('-', col.ot, y + 3.8, { align: 'right' }); ink(INK); }
+    bold(); doc.text(money(dayPay(r)), col.amt, y + 3.8, { align: 'right' });
+    y += 7;
+  });
+
+  // totals
+  if (y + 44 > 282) { doc.addPage(); y = 20; }
+  y += 5;
+  const tx = 105;
+  norm(); doc.setFontSize(10); ink(MUTE);
+  doc.text(`Wages (${recs.length} ${recs.length === 1 ? 'day' : 'days'})`, tx, y + 4);
+  ink(INK); doc.text(money(wageSum), R - 4, y + 4, { align: 'right' });
+  ink(MUTE); doc.text(`Overtime (${otN} ${otN === 1 ? 'day' : 'days'})`, tx, y + 12);
+  ink(INK); doc.text(money(otSum), R - 4, y + 12, { align: 'right' });
+  fill(ACC); doc.roundedRect(tx - 4, y + 18, R - tx + 4, 15, 3, 3, 'F');
+  bold(); doc.setFontSize(9); ink(WHITE); doc.text('TOTAL FOR THE MONTH', tx, y + 27.5);
+  doc.setFontSize(14); doc.text(money(total), R - 4, y + 28, { align: 'right' });
+
+  // footer on every page
+  const pages = doc.getNumberOfPages(), made = new Date();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(226, 232, 240); doc.line(M, 284, R, 284);
+    norm(); doc.setFontSize(8); ink(MUTE);
+    doc.text(`Generated ${made.getDate()} ${MONTHS[made.getMonth()].slice(0, 3)} ${made.getFullYear()}`, M, 289);
+    doc.text(`Page ${p} of ${pages}`, R, 289, { align: 'right' });
+  }
+  return doc;
+}
+
 $('pdf').onclick = () => {
   const recs = monthRecords();
   if (!recs.length) { alert('No worked days marked for this month yet.'); return; }
   if (!window.jspdf) { alert('PDF library could not load. Check your internet connection and try again.'); return; }
-  const doc = new window.jspdf.jsPDF();
-  const title = `${MONTHS[view.m]} ${view.y}`;
-  doc.setFontSize(20); doc.text('Monthly Work Summary', 15, 20);
-  doc.setFontSize(12); doc.setTextColor(90);
-  doc.text(title + (state.name ? `  -  ${state.name}` : ''), 15, 28);
-  doc.setTextColor(0);
-
-  let y = 42;
-  const head = () => {
-    doc.setFont(undefined, 'bold'); doc.setFontSize(10);
-    doc.text('Date', 15, y); doc.text('Day', 50, y); doc.text('Type', 90, y);
-    doc.text('Wage', 125, y, { align: 'right' }); doc.text('Overtime', 160, y, { align: 'right' }); doc.text('Amount', 195, y, { align: 'right' });
-    doc.line(15, y + 2, 195, y + 2); doc.setFont(undefined, 'normal'); y += 9;
-  };
-  head();
-  let otN = 0, wageSum = 0, otSum = 0;
-  recs.forEach(([k, r]) => {
-    if (y > 270) { doc.addPage(); y = 20; head(); }
-    const dt = new Date(k + 'T00:00:00');
-    wageSum += r.wage;
-    if (r.ot) { otN++; otSum += r.otAmt || 0; }
-    doc.text(`${pad(dt.getDate())} ${MONTHS[dt.getMonth()].slice(0, 3)} ${dt.getFullYear()}`, 15, y);
-    doc.text(DOW_LONG[dt.getDay()], 50, y);
-    doc.text(r.ot ? 'Overtime' : 'Normal day', 90, y);
-    doc.text(money(r.wage), 125, y, { align: 'right' });
-    doc.text(r.ot ? money(r.otAmt || 0) : '-', 160, y, { align: 'right' });
-    doc.text(money(dayPay(r)), 195, y, { align: 'right' });
-    y += 7;
-  });
-
-  if (y > 235) { doc.addPage(); y = 20; }
-  y += 4; doc.line(15, y, 195, y); y += 9;
-  doc.setFontSize(11);
-  doc.text(`Wages (${recs.length} days worked)`, 15, y); doc.text(money(wageSum), 195, y, { align: 'right' }); y += 7;
-  doc.text(`Overtime (${otN} ${otN === 1 ? 'day' : 'days'})`, 15, y); doc.text(money(otSum), 195, y, { align: 'right' }); y += 11;
-  doc.setFont(undefined, 'bold'); doc.setFontSize(14);
-  doc.text('TOTAL FOR THE MONTH', 15, y); doc.text(money(wageSum + otSum), 195, y, { align: 'right' });
-
-  doc.save(`Work-summary-${view.y}-${pad(view.m + 1)}.pdf`);
+  buildPdf(recs).save(`Work-summary-${view.y}-${pad(view.m + 1)}.pdf`);
 };
 
 async function hashPw(pw, salt) {
